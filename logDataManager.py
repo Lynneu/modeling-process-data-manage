@@ -363,119 +363,101 @@ def solve(List):
                             isContinuous_Move = 1
                            # print(datalogList[-1].key + ' ' + datalogList[-1].detail)
                 else:
-                    # 在tmpList中找到最后一条包含category和key信息的日志条目，即外部实体最后的位置
-                    for j in range(len(tmpList) - 1, -1, -1):
+                    # 记录已经处理过的移动节点
+                    keylist = []
+                    for j in range(len(tmpList)):
                         if "category:" in tmpList[j]['content'] and "key:" in tmpList[j]['content']:
                             lastpoint = j
-                            break
-                    # 在tmpList中找到第一条包含category和key信息的日志条目，即外部实体最初的位置
-                    for j in range(len(tmpList)):
-                        if "category:" in tmpList[j]['content'] and "key:" in tmpList[j]['content']:
-                            firstpoint = j
-                            break
-                    try:
-                        newlogList = re.split(r"[ ]+", tmpList[lastpoint]['content'])
-                        oldlogList = re.split(r"[ ]+", tmpList[firstpoint]['content'])
-                        # 获取新节点的x y坐标
-                        newindex = newlogList.index("new:")
-                        newx = newlogList[newindex + 1]
-                        newy = newlogList[newindex + 2]
-                        # 获取旧节点的x y坐标
-                        oldindex = oldlogList.index("old:")
-                        oldx = oldlogList[oldindex + 1]
-                        oldy = oldlogList[oldindex + 2]
-                        log = tmpList[lastpoint]['content']
-                        # print(tmpList)
-                        # print(log)
-                        logList = re.split(r"[ ]+", log)
-                        categoryindex = logList.index("category:")
-                        category = logList[categoryindex + 1]
-                        keyindex = logList.index("key:")
-                        key = logList[keyindex + 1]
-                        # 获取操作对象的文本内容
-                        textindex = newlogList.index("text:")
-                        text = newlogList[textindex + 1]
-                    # 若解析过程中发生错误，则进入
-                    except:
-                        category = "?"
-                        oldx = oldy = newx = newy = key = text = None
-                    starttime = tmpList[0]['timeStamp']
-                    endtime = List[i]['timeStamp']
-                    # print(starttime)
-                    # print(endtime)
-
-                    datalogList.append(
-                        datalog("MovingNode", category, starttime, endtime, old=(oldx, oldy), new=(newx, newy),
-                                key=key, routes=copy.deepcopy(tmpList), text=text))
-
-                    # 处理节点文本编辑过程缺失
-                    for i in range(len(datalogList) - 1, -1, -1):
-                        # 如果先找到的是删除信息，说明该元素是删除后新添加的，还未被修改过text
-                        if datalogList[i].type == 'Delete' and \
-                                datalogList[i].category != 'dataflow' and \
-                                datalogList[i].key == key:
-                            break
-                        if datalogList[i].type == 'TextEditing' and \
-                                datalogList[i].category != 'dataflow' and \
-                                datalogList[i].key == key:
-                            if datalogList[i].text != datalogList[-1].text:
-                                print('complete node word!')
-                                print(datalogList[i].text)
-                                datalogList[i].text = datalogList[-1].text
-                                if key in id_to_name_node:
-                                    id_to_name_node[key]['name'] = datalogList[-1].text
-                                print(datalogList[-1].text)
-                                print(id_to_name_node)
-                                print('---end complete---')
-                            break
-
-                    # 处理数据流文本编辑过程缺失
-                    link_textlist = []
-                    for j in range(len(tmpList)):
-                        if "from:" in tmpList[j]['content']:
-                            log = tmpList[j]['content']
+                            log = tmpList[lastpoint]['content']
                             logList = re.split(r"[ ]+", log)
-                            fromindex = logList.index("from:")
-                            frompoint = logList[fromindex + 1]
-                            toindex = logList.index("to:")
-                            topoint = logList[toindex + 1]
-                            key = "from " + frompoint + " to " + topoint
-                            # 获取操作对象的文本内容
-                            textindex = logList.index("text:")
-                            text = logList[textindex + 1]
-                            hasKey = 0
-                            for tpl in link_textlist:
-                                if key in tpl:
-                                    hasKey = 1
-                                    break
-                            if hasKey == 0:
-                                new_entry = (key, text)
-                                link_textlist.append(new_entry)
-                    print('link_textlist')
-                    print(link_textlist)
-                    for i in range(len(link_textlist)):
-                        key = link_textlist[i][0]
-                        text = link_textlist[i][1]
-                        for j in range(len(datalogList) - 1, -1, -1):
-                            # 如果先找到的是删除信息，说明该元素是删除后新添加的，还未被修改过text
-                            if datalogList[j].type == 'Delete' and \
-                                    datalogList[j].category == 'dataflow' and \
-                                    datalogList[j].key == key:
-                                print('跳过啦！！！！！')
-                                break
-                            if datalogList[j].type == 'TextEditing' and \
-                                    datalogList[j].category == 'dataflow' and \
-                                    datalogList[j].key == key:
-                                if datalogList[j].text != text:
-                                    print('complete link word!')
-                                    print(datalogList[j].text)
-                                    print(text)
-                                    datalogList[j].text = text
-                                    if key in id_to_name_link:
-                                        id_to_name_link[key]['name'] = text
-                                    print(id_to_name_link)
-                                    print('----end comletelink---')
-                                break
+                            keyindex = logList.index("key:")
+                            key = logList[keyindex + 1]
+                            if key in keylist:
+                                continue
+                            else:
+                                keylist.append(key)
+                                try:
+                                    categoryindex = logList.index("category:")
+                                    category = logList[categoryindex + 1]
+                                    textindex = logList.index("text:")
+                                    text = logList[textindex + 1]
+                                except:
+                                    category = "?"
+                                    key = text = None
+                                starttime = tmpList[0]['timeStamp']
+                                endtime = List[i]['timeStamp']
+                                datalogList.append(
+                                    datalog("MovingNode", category, starttime, endtime,
+                                            key=key, routes=copy.deepcopy(tmpList), text=text))
+
+                                # 处理节点文本编辑过程缺失
+                                for i in range(len(datalogList) - 1, -1, -1):
+                                    # 如果先找到的是删除信息，说明该元素是删除后新添加的，还未被修改过text
+                                    if datalogList[i].type == 'Delete' and \
+                                            datalogList[i].category != 'dataflow' and \
+                                            datalogList[i].key == key:
+                                        break
+                                    if datalogList[i].type == 'TextEditing' and \
+                                            datalogList[i].category != 'dataflow' and \
+                                            datalogList[i].key == key:
+                                        if datalogList[i].text != datalogList[-1].text:
+                                            print('complete node word!')
+                                            print(datalogList[i].text)
+                                            datalogList[i].text = datalogList[-1].text
+                                            if key in id_to_name_node:
+                                                id_to_name_node[key]['name'] = datalogList[-1].text
+                                            print(datalogList[-1].text)
+                                            print(id_to_name_node)
+                                            print('---end complete---')
+                                        break
+
+                                # 处理数据流文本编辑过程缺失
+                                link_textlist = []
+                                for j in range(len(tmpList)):
+                                    if "from:" in tmpList[j]['content']:
+                                        log = tmpList[j]['content']
+                                        logList = re.split(r"[ ]+", log)
+                                        fromindex = logList.index("from:")
+                                        frompoint = logList[fromindex + 1]
+                                        toindex = logList.index("to:")
+                                        topoint = logList[toindex + 1]
+                                        key = "from " + frompoint + " to " + topoint
+                                        # 获取操作对象的文本内容
+                                        textindex = logList.index("text:")
+                                        text = logList[textindex + 1]
+                                        hasKey = 0
+                                        for tpl in link_textlist:
+                                            if key in tpl:
+                                                hasKey = 1
+                                                break
+                                        if hasKey == 0:
+                                            new_entry = (key, text)
+                                            link_textlist.append(new_entry)
+                                print('link_textlist')
+                                print(link_textlist)
+                                for i in range(len(link_textlist)):
+                                    key = link_textlist[i][0]
+                                    text = link_textlist[i][1]
+                                    for j in range(len(datalogList) - 1, -1, -1):
+                                        # 如果先找到的是删除信息，说明该元素是删除后新添加的，还未被修改过text
+                                        if datalogList[j].type == 'Delete' and \
+                                                datalogList[j].category == 'dataflow' and \
+                                                datalogList[j].key == key:
+                                            print('跳过啦！！！！！')
+                                            break
+                                        if datalogList[j].type == 'TextEditing' and \
+                                                datalogList[j].category == 'dataflow' and \
+                                                datalogList[j].key == key:
+                                            if datalogList[j].text != text:
+                                                print('complete link word!')
+                                                print(datalogList[j].text)
+                                                print(text)
+                                                datalogList[j].text = text
+                                                if key in id_to_name_link:
+                                                    id_to_name_link[key]['name'] = text
+                                                print(id_to_name_link)
+                                                print('----end comletelink---')
+                                            break
 
 
             # 移动数据流
@@ -594,8 +576,53 @@ def solve(List):
                 datalogList.append(datalog("Init", None, starttime, endtime))
             # 重做
             elif re.match(r"\*  FinishedRedo:  Redo", List[i]['content']):
+                redolength = 0
+                # 处理多次恢复
+                if datalogList[-1].type == 'Redo':
+                    for i in range(len(datalogList) - 1, -1, -1):
+                        if (datalogList[i].type == 'Redo'):
+                            redolength = redolength + 1
+                        else:
+                            break
+                i = len(datalogList) - 1 - redolength
+                logList = datalogList[i].detail.split()
+                numindex = logList.index('撤销元素个数:')
+                num = logList[numindex + 1]
+                keyindex = logList.index('key:')
+                key = logList[keyindex + 1]
+                categoryindex = logList.index('category:')
+                category = logList[categoryindex + 1]
+                textindex = logList.index('text:')
+                text = logList[textindex + 1]
+                typeindex = logList.index('撤销动作:')
+                type = logList[typeindex + 1].split("_")[0]
+
+                if type == 'AddingNode' or type == 'PastingNode':
+                    elements = datalogList[i].detail.strip().split("\n\n")  # 使用两个换行符分割元素，并去除开头和结尾的空白字符
+                    values = []
+                    target_string = "撤销元素个数:"
+                    numindex = datalogList[i].detail.index(target_string) + len(target_string) - 1
+                    num = int(elements[0][numindex + 1])
+                    # print(elements[0])
+                    # print(numindex)
+                    # print(num)
+                    for element in elements:
+                        lines = element.strip().split("\n")  # 分割每个元素的行，并去除开头和结尾的空白字符
+                        for line in lines[num + 1:]:  # 跳过前两行（撤销动作和撤销元素个数）
+                            if ":" in line:
+                                info = {}  # 创建一个新的字典用于存储键值对
+                                key_value_pairs = line.split()  # 分割键值对
+                                for key_value_pair in key_value_pairs:
+                                    key, value = key_value_pair.split(":", 1)  # 分割键和值
+                                    info[key.strip()] = value.strip()  # 去除空格并存储键值对
+                                values.append(info)
+                    # 提取了撤销操作的每一个元素信息后开始恢复或删除这些元素，可以把提取元素信息放到循环最外面，然后再根据撤销的操作类型进行处理
+
                 starttime = List[i]['timeStamp']
                 endtime = List[i]['timeStamp']
+
+
+
                 datalogList.append(datalog("Redo", None, starttime, endtime))
             # 撤销
             elif re.match(r"\*  FinishedUndo:  Undo", List[i]['content']):
@@ -635,9 +662,9 @@ def solve(List):
                     detailofItem = ''
                     detailofType = '撤销动作: '
                     type = datalogList[-1 * undolength].type
-                    print("撤销动作")
-                    print(type)
-                    print(-1 * undolength)
+                    # print("撤销动作")
+                    # print(type)
+                    # print(-1 * undolength)
                     newundolength = -1 * undolength
                     print(datalogList[newundolength])
                     # 如果撤销的操作是删除，相当于添加元素
@@ -763,7 +790,7 @@ def solve(List):
             # 改变节点大小
             elif re.match(r"\*  CommittedTransaction:  Resizing", List[i]['content']):
                 # print(tmpList)
-                # 处理连续移动多次信息
+                # 处理连续调整多次信息
                 if len(tmpList) == 0:
                     if datalogList[-1].type == 'Resizing':
                         time_interval1 = duration(datalogList[-1].endtime, List[i]['timeStamp'])
@@ -782,7 +809,6 @@ def solve(List):
                     # 在tmpList中找到最后一条包含category和key信息的日志条目
                     firstpoint = lastpoint = None
                     for j in range(len(tmpList) - 1, -1, -1):
-                        # print(j)
                         if "category:" in tmpList[j]['content'] and "key:" in tmpList[j]['content']:
                             lastpoint = j
                             break
@@ -978,7 +1004,7 @@ def solve(List):
             elif re.match(r"\*  CommittedTransaction:  Delete", List[i]['content']):
                 # print(id_to_name_node)
                 # print(id_to_name_link)
-                print('delete!!!!!!!')
+                # print('delete!!!!!!!')
                 # change_object_len = len(change_object.keys())
                 for j in range(len(tmpList)):
                     # 如果删除的是节点
